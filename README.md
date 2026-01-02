@@ -42,10 +42,16 @@ pip install -r requirements.txt
 ### Configuration
 
 #### Option 1: Setup Wizard (Recommended)
-Simply run the bot and the setup wizard will guide you:
+Run the interactive setup wizard to configure the bot:
 ```bash
-python chatbot.py
+python setup_wizard.py
 ```
+
+The wizard will:
+- Guide you through getting Twitch OAuth token
+- Help you set up Perplexity API key
+- Validate your credentials
+- Create necessary directories and config files
 
 #### Option 2: Manual Configuration
 Copy `.env.example` to `.env` and fill in your credentials:
