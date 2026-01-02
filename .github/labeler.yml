@@ -1,0 +1,41 @@
+documentation:
+  - '**/*.md'
+  - '**/*.txt'
+  - 'docs/**/*'
+
+dependencies:
+  - 'requirements.txt'
+  - 'setup.py'
+  - 'pyproject.toml'
+
+configuration:
+  - '**/*.yml'
+  - '**/*.yaml'
+  - '**/*.json'
+  - '**/*.toml'
+  - '.env.example'
+
+core:
+  - 'chatbot.py'
+
+gui:
+  - 'gui.py'
+
+api:
+  - 'ai_provider.py'
+
+memory:
+  - 'memory.py'
+
+config:
+  - 'config.py'
+
+utilities:
+  - 'utils.py'
+
+ci/cd:
+  - '.github/workflows/**/*'
+
+tests:
+  - 'test_*.py'
+  - 'tests/**/*'
