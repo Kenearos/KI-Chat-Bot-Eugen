@@ -110,6 +110,62 @@ class EugenBot(irc.bot.SingleServerIRCBot):
                 self.handle_mention(username, message),
                 self.loop
             )
+        # Check for ambiguous greetings (AI will decide if bot is addressed)
+        elif self.detector.is_ambiguous_greeting(message):
+            self.logger.debug(f"Ambiguous greeting detected from {username}: {message}")
+            if self.dashboard:
+                self.dashboard.log_event("info", {"message": f"Ambiguous greeting: {message}"})
+
+            # Ask AI if bot is addressed
+            asyncio.run_coroutine_threadsafe(
+                self.check_if_addressed(username, message),
+                self.loop
+            )
+
+    async def check_if_addressed(self, username, message):
+        """
+        Check with AI if an ambiguous message is addressed to the bot
+
+        Args:
+            username (str): User who sent the message
+            message (str): Ambiguous message (e.g., "Hi wie gehts")
+        """
+        try:
+            # Ask AI if the message is directed at the bot
+            check_prompt = f"""You are {self.bot_name}, a Twitch chat bot.
+
+A user named {username} just wrote: "{message}"
+
+This message doesn't explicitly mention you, but it might be directed at you.
+Consider:
+- Is this a greeting or question that could be for the bot?
+- Is there recent conversation context suggesting it's for you?
+- Or is it likely a general chat message not for the bot?
+
+Respond with ONLY "YES" if the message is likely addressed to you, or "NO" if not.
+Do not explain, just answer YES or NO."""
+
+            messages = [{"role": "user", "content": check_prompt}]
+
+            self.logger.debug(f"Asking AI if addressed: {message}")
+            response = await self.ai.get_response(messages)
+
+            if response and "YES" in response.upper():
+                self.logger.debug(f"AI says message is for bot: {message}")
+                if self.dashboard:
+                    self.dashboard.log_event("info", {"message": f"AI confirmed: message is for bot"})
+
+                # Treat as mention and respond
+                await self.handle_mention(username, message)
+            else:
+                self.logger.debug(f"AI says message is not for bot: {message}")
+                if self.dashboard:
+                    self.dashboard.log_event("info", {"message": f"AI confirmed: message is not for bot"})
+
+        except Exception as e:
+            self.logger.error(f"Error checking if addressed: {str(e)}")
+            if self.dashboard:
+                self.dashboard.log_event("error", {"error": str(e)})
 
     async def handle_mention(self, username, message):
         """
