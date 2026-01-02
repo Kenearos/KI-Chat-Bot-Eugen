@@ -49,11 +49,16 @@ class MentionDetector:
         """Generate common nicknames from bot name"""
         nicknames = []
 
-        # For kenearosmd, generate: Kene, Kenearos
-        if len(bot_name) >= 4:
-            nicknames.append(bot_name[:4])  # First 4 chars (Kene)
-        if len(bot_name) >= 8:
-            nicknames.append(bot_name[:8])  # First 8 chars (Kenearos)
+        # Generate nicknames at 4, 6, 8, 10 character positions
+        # For kenearosmd: Kene, Kenear, Kenearos, kenearosmd
+        for length in [4, 6, 8, 10, 12]:
+            if len(bot_name) >= length:
+                nicknames.append(bot_name[:length])
+
+        # Also add common variations
+        # If name ends with 'md', add version without it
+        if bot_name.lower().endswith('md') and len(bot_name) > 2:
+            nicknames.append(bot_name[:-2])  # kenearos from kenearosmd
 
         # Remove duplicates and the full name
         nicknames = [n for n in set(nicknames) if n != bot_name]
