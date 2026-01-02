@@ -232,9 +232,14 @@ class EugenBot(irc.bot.SingleServerIRCBot):
             self.logger.info("Starting IRC bot...")
             super().start()
         except Exception as e:
-            self.logger.error(f"Bot error: {str(e)}")
-            if self.dashboard:
-                self.dashboard.log_event("error", {"error": f"Bot crashed: {str(e)}"})
+            # Ignore errors related to shutdown (file descriptor issues)
+            error_msg = str(e)
+            if "file descriptor" in error_msg.lower() and not self.is_running:
+                self.logger.debug(f"Shutdown cleanup: {error_msg}")
+            else:
+                self.logger.error(f"Bot error: {error_msg}")
+                if self.dashboard:
+                    self.dashboard.log_event("error", {"error": f"Bot crashed: {error_msg}"})
 
     def stop(self):
         """Stop the bot"""
@@ -243,14 +248,22 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         if self.dashboard:
             self.dashboard.log_event("info", {"message": "Shutting down..."})
 
+        # Safely disconnect from IRC
         try:
-            self.connection.quit("Bot shutting down")
-            self.die()
-        except:
-            pass
+            if hasattr(self, 'connection') and self.connection and self.connection.connected:
+                self.connection.quit("Bot shutting down")
+        except Exception as e:
+            self.logger.debug(f"Error during disconnect: {str(e)}")
 
-        if self.loop:
-            self.loop.stop()
+        # Stop IRC bot
+        try:
+            self.die()
+        except Exception as e:
+            self.logger.debug(f"Error during die(): {str(e)}")
+
+        # Stop event loop
+        if self.loop and self.loop.is_running():
+            self.loop.call_soon_threadsafe(self.loop.stop)
 
 
 def check_env_file():
