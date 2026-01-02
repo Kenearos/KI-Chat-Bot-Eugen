@@ -19,41 +19,45 @@ Du kannst das Perplexity-Modell jederzeit ändern, ohne den Bot neu zu konfiguri
 3. Der Setup Wizard startet automatisch
 4. Wähle dein gewünschtes Modell aus der Dropdown-Liste
 
-## Verfügbare Modelle
+## Verfügbare Modelle (Perplexity API 2026)
 
 ### Empfohlen für Chat Bots:
 
-**sonar-pro** (Standard)
-- Beste Qualität und Reasoning
-- Ideal für Chat-Interaktionen
-- Gutes Preis-Leistungs-Verhältnis
+**sonar-pro** (Standard) ⭐
+- Tieferes Inhaltsverständnis
+- 2x mehr Suchergebnisse als sonar
+- Verbesserte Suchgenauigkeit
+- Ideal für komplexe, mehrstufige Anfragen
+- Basiert auf Llama 3.3 70B
+- **Beste Wahl für Twitch Chat Bots!**
 
 ### Alternative Modelle:
 
 **sonar**
-- Schneller, günstiger
-- Für einfache Anfragen
-- Weniger komplex
+- Leichtgewichtig und schnell
+- Niedrigere Kosten
+- Einfache Frage-Antwort-Features
+- Gut für geschwindigkeitsoptimierte Anwendungen
+- Basiert auf Llama 3.3 70B
 
 **sonar-reasoning**
-- Erweitertes Reasoning
-- Für komplexe Probleme
-- Langsamer, aber durchdachter
+- Echtzeit-Reasoning mit Suche
+- Zeigt Denkprozess
+- Gut für Problemlösung
+- Moderate Geschwindigkeit
 
-**llama-3.1-sonar-small-128k-online**
-- Kleinster, schnellster Llama
-- 128k Kontext
-- Beste für schnelle, einfache Antworten
-
-**llama-3.1-sonar-large-128k-online**
-- Größeres Llama-Modell
-- Bessere Qualität als small
-- Guter Kompromiss
-
-**llama-3.1-sonar-huge-128k-online**
-- Größtes Llama-Modell
-- Beste Qualität, aber langsamer
+**sonar-reasoning-pro**
+- Powered by DeepSeek-R1
+- Erweiterte Reasoning-Fähigkeiten
+- Sichtbarer Reasoning-Content via API
+- Beste für komplexe logische Aufgaben
 - Höhere Kosten
+
+**sonar-deep-research**
+- Lange, ausführliche Research-Reports
+- Quellenreiche Ausgabe
+- Beste für detaillierte Analysen
+- Langsamer, umfassende Antworten
 
 ## Beispiel .env Datei
 

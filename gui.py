@@ -223,13 +223,12 @@ class SetupWizard:
                  "sonar-pro",
                  "sonar",
                  "sonar-reasoning",
-                 "llama-3.1-sonar-small-128k-online",
-                 "llama-3.1-sonar-large-128k-online",
-                 "llama-3.1-sonar-huge-128k-online"
-             ], default_value="sonar-pro", key="-MODEL-", size=(35, 1)),
+                 "sonar-reasoning-pro",
+                 "sonar-deep-research"
+             ], default_value="sonar-pro", key="-MODEL-", size=(25, 1)),
              sg.Button("?", key="-MODEL-INFO-", size=(2, 1))],
             [sg.Text("", size=(20, 1)),
-             sg.Text("Recommended: sonar-pro (best quality)", font=("Arial", 8), text_color="gray")],
+             sg.Text("Recommended: sonar-pro (chat bots)", font=("Arial", 8), text_color="gray")],
             [sg.Text("Max Tokens:", size=(20, 1)), sg.Input("450", key="-TOKENS-")],
 
             [sg.HorizontalSeparator()],
@@ -253,39 +252,48 @@ class SetupWizard:
 
             # Show model info
             if event == "-MODEL-INFO-":
-                model_info = """PERPLEXITY MODEL OVERVIEW:
+                model_info = """PERPLEXITY API MODELS (2026):
 
-🔵 sonar-pro (RECOMMENDED)
-   - Best quality and reasoning capabilities
-   - Ideal for chat bots and complex queries
-   - Good balance of speed and intelligence
+🔵 sonar-pro (RECOMMENDED FOR CHAT BOTS)
+   - Deeper content understanding
+   - 2x more search results than sonar
+   - Enhanced search accuracy
+   - Best for complex, multi-step queries
+   - Built on Llama 3.3 70B
+   ➜ Use this for chat bots!
 
 🟢 sonar
-   - Faster, lower cost
-   - Good for simple queries
-   - Less complex reasoning
+   - Lightweight and fast
+   - Lower cost
+   - Simple question-answer features
+   - Good for speed-optimized applications
+   - Built on Llama 3.3 70B
 
 🧠 sonar-reasoning
-   - Enhanced reasoning for complex problems
-   - Slower but more thoughtful responses
+   - Real-time reasoning with search
+   - Shows reasoning process
+   - Good for problem-solving
+   - Moderate speed
 
-📚 llama-3.1-sonar-small-128k-online
-   - Smallest, fastest Llama model
-   - 128k context window
-   - Best for simple, quick responses
-
-📚 llama-3.1-sonar-large-128k-online
-   - Larger Llama model
-   - Better quality than small
-   - Good balance
-
-📚 llama-3.1-sonar-huge-128k-online
-   - Largest Llama model
-   - Best quality but slower
+⚡ sonar-reasoning-pro
+   - Powered by DeepSeek-R1
+   - Advanced reasoning capabilities
+   - Visible reasoning content via API
+   - Best for complex logical tasks
    - Higher cost
 
-For most chat bots: Use sonar-pro"""
-                sg.popup_scrolled(model_info, title="Model Information", size=(60, 25))
+📊 sonar-deep-research
+   - Long-form research reports
+   - Source-dense output
+   - Best for detailed analysis
+   - Slower, comprehensive responses
+
+RECOMMENDATION:
+• Chat Bots: sonar-pro
+• Quick answers: sonar
+• Complex reasoning: sonar-reasoning-pro
+• Research: sonar-deep-research"""
+                sg.popup_scrolled(model_info, title="Model Information", size=(70, 30))
                 continue
 
             if event == "-SAVE-":
