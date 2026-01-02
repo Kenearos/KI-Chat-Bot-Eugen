@@ -3,6 +3,7 @@ Conversation Memory for Eugen Bot
 Stores and retrieves chat history per user with time-based filtering
 """
 import json
+import logging
 from pathlib import Path
 from datetime import datetime, timedelta
 from typing import List, Dict, Optional
@@ -11,7 +12,7 @@ from typing import List, Dict, Optional
 class ConversationMemory:
     """Manages persistent conversation history for each user"""
 
-    def __init__(self, data_dir="data/conversations", max_messages=25, retention_hours=1):
+    def __init__(self, data_dir="data/conversations", max_messages=25, retention_hours=1, logger=None):
         """
         Initialize conversation memory
 
@@ -19,11 +20,13 @@ class ConversationMemory:
             data_dir (str): Directory to store conversation JSON files
             max_messages (int): Maximum messages to store per user
             retention_hours (int): How long to keep messages in context
+            logger: Optional logger instance for error reporting
         """
         self.data_dir = Path(data_dir)
         self.data_dir.mkdir(parents=True, exist_ok=True)
         self.max_messages = max_messages
         self.retention_hours = retention_hours
+        self.logger = logger or logging.getLogger(__name__)
 
     def _get_user_file(self, username):
         """Get the file path for a user's conversation history"""
@@ -51,7 +54,7 @@ class ConversationMemory:
             with open(file_path, 'r', encoding='utf-8') as f:
                 history = json.load(f)
         except Exception as e:
-            print(f"Error loading history for {username}: {e}")
+            self.logger.error(f"Error loading history for {username}: {e}")
             return []
 
         # Filter by retention time
@@ -87,7 +90,7 @@ class ConversationMemory:
                 with open(file_path, 'r', encoding='utf-8') as f:
                     history = json.load(f)
             except Exception as e:
-                print(f"Error loading history for {username}: {e}")
+                self.logger.error(f"Error loading history for {username}: {e}")
                 history = []
 
         # Add new message
@@ -106,7 +109,7 @@ class ConversationMemory:
             with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(history, f, ensure_ascii=False, indent=2)
         except Exception as e:
-            print(f"Error saving history for {username}: {e}")
+            self.logger.error(f"Error saving history for {username}: {e}")
 
     def format_for_prompt(self, history):
         """
@@ -138,7 +141,7 @@ class ConversationMemory:
             try:
                 file_path.unlink()
             except Exception as e:
-                print(f"Error clearing history for {username}: {e}")
+                self.logger.error(f"Error clearing history for {username}: {e}")
 
     def get_all_users(self):
         """
