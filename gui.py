@@ -19,7 +19,11 @@ class Dashboard:
             bot: Reference to the main bot instance
         """
         self.bot = bot
-        sg.theme('DarkBlue3')
+        # PySimpleGUI 5.x compatibility
+        try:
+            sg.theme('DarkBlue3')
+        except AttributeError:
+            sg.set_options(theme='DarkBlue3')
 
         # Event queue for thread-safe updates
         self.event_queue = Queue()
@@ -196,7 +200,11 @@ class SetupWizard:
     """Configuration wizard for first-time setup"""
 
     def __init__(self):
-        sg.theme('DarkBlue3')
+        # PySimpleGUI 5.x compatibility
+        try:
+            sg.theme('DarkBlue3')
+        except AttributeError:
+            sg.set_options(theme='DarkBlue3')
 
     def run(self):
         """
