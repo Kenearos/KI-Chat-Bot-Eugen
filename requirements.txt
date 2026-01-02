@@ -1,5 +1,5 @@
 irc==20.1.0
 python-dotenv==1.0.0
-PySimpleGUI==4.60.0
+PySimpleGUI==5.0.8.3
 requests==2.31.0
 httpx==0.25.0
