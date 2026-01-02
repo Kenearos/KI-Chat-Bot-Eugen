@@ -66,6 +66,7 @@ class EugenBot(irc.bot.SingleServerIRCBot):
 
         self.is_running = False
         self.loop = None
+        self.loop_ready = threading.Event()  # Signal when event loop is ready
 
         self.logger.info(f"Bot initialized: {nickname} → {self.channel}")
 
@@ -216,6 +217,18 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         # Create event loop for async operations
         self.loop = asyncio.new_event_loop()
 
+        # Start event loop in separate thread
+        loop_thread = threading.Thread(target=self._run_event_loop, daemon=True)
+        loop_thread.start()
+
+        # Wait for event loop to be ready before starting IRC bot
+        self.logger.debug("Waiting for event loop to be ready...")
+        self.loop_ready.wait(timeout=5.0)
+        if not self.loop_ready.is_set():
+            self.logger.error("Event loop failed to start within timeout")
+            raise RuntimeError("Event loop failed to start")
+        self.logger.debug("Event loop is ready")
+
         # Start bot in separate thread
         bot_thread = threading.Thread(target=self._run_bot, daemon=True)
         bot_thread.start()
@@ -225,9 +238,38 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         self.logger.info("Starting dashboard...")
         self.dashboard.run()
 
+    def _run_event_loop(self):
+        """Run the async event loop (called in thread)"""
+        asyncio.set_event_loop(self.loop)
+        self.logger.debug("Starting event loop...")
+        
+        # Signal that the loop is ready
+        self.loop_ready.set()
+        
+        try:
+            self.loop.run_forever()
+        finally:
+            # Cleanup pending asyncio tasks and close the loop
+            self.logger.debug("Event loop stopped, starting cleanup...")
+            try:
+                pending = [t for t in asyncio.all_tasks(self.loop) if not t.done()]
+                for task in pending:
+                    task.cancel()
+                if pending:
+                    self.loop.run_until_complete(
+                        asyncio.gather(*pending, return_exceptions=True)
+                    )
+                # Shutdown async generators
+                self.loop.run_until_complete(self.loop.shutdown_asyncgens())
+            except Exception as cleanup_error:
+                # Log but do not re-raise to avoid masking original shutdown reason
+                self.logger.debug(f"Error during event loop cleanup: {cleanup_error}")
+            finally:
+                self.loop.close()
+                self.logger.debug("Event loop closed")
+
     def _run_bot(self):
         """Run the IRC bot (called in thread)"""
-        asyncio.set_event_loop(self.loop)
         try:
             self.logger.info("Starting IRC bot...")
             super().start()
