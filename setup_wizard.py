@@ -5,8 +5,11 @@ Interactive configuration tool for first-time setup
 import os
 import sys
 import asyncio
+import socket
+import getpass
 from pathlib import Path
 from dotenv import set_key, load_dotenv
+import httpx
 
 
 class Colors:
@@ -48,42 +51,39 @@ def print_warning(text):
     print(f"{Colors.WARNING}⚠ {text}{Colors.ENDC}")
 
 
-async def validate_twitch_token(token, channel):
+async def validate_twitch_token(token, bot_nickname):
     """
     Validate Twitch OAuth token by attempting IRC connection
 
     Args:
         token (str): OAuth token
-        channel (str): Channel name
+        bot_nickname (str): Bot nickname for authentication
 
     Returns:
         bool: True if valid
     """
-    import socket
-
     if not token.startswith("oauth:"):
         print_error("Token muss mit 'oauth:' beginnen!")
         return False
 
     try:
         print_info("Validiere Twitch-Verbindung...")
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.settimeout(5)
-        sock.connect(('irc.chat.twitch.tv', 6667))
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.settimeout(5)
+            sock.connect(('irc.chat.twitch.tv', 6667))
 
-        # Send authentication
-        sock.send(f"PASS {token}\r\n".encode())
-        sock.send(f"NICK testbot\r\n".encode())
+            # Send authentication
+            sock.send(f"PASS {token}\r\n".encode())
+            sock.send(f"NICK {bot_nickname}\r\n".encode())
 
-        response = sock.recv(1024).decode()
-        sock.close()
+            response = sock.recv(1024).decode()
 
-        if "Login authentication failed" in response:
-            print_error("Twitch OAuth Token ist ungültig!")
-            return False
+            if "Login authentication failed" in response:
+                print_error("Twitch OAuth Token ist ungültig!")
+                return False
 
-        print_success("Twitch-Verbindung erfolgreich!")
-        return True
+            print_success("Twitch-Verbindung erfolgreich!")
+            return True
 
     except Exception as e:
         print_warning(f"Konnte Twitch-Verbindung nicht testen: {e}")
@@ -91,25 +91,29 @@ async def validate_twitch_token(token, channel):
         return True
 
 
-async def validate_perplexity_key(api_key):
+async def validate_perplexity_key(api_key, model="sonar-pro"):
     """
     Validate Perplexity API key with test request
+    
+    Note: Validation uses the specified model (default: sonar-pro).
+    If your API key doesn't have access to this model, validation may fail
+    even with a valid key for other models.
 
     Args:
         api_key (str): Perplexity API key
+        model (str): Model to test with (defaults to sonar-pro)
 
     Returns:
-        bool: True if valid
+        tuple: (bool success, bool should_retry) - success indicates if validation passed,
+               should_retry indicates if user should be prompted to retry
     """
-    import httpx
-
     try:
-        print_info("Validiere Perplexity API-Key...")
+        print_info(f"Validiere Perplexity API-Key mit Modell '{model}'...")
         async with httpx.AsyncClient(timeout=10.0) as client:
             response = await client.post(
                 "https://api.perplexity.ai/chat/completions",
                 json={
-                    "model": "sonar-pro",
+                    "model": model,
                     "messages": [{"role": "user", "content": "test"}],
                     "max_tokens": 10
                 },
@@ -121,19 +125,19 @@ async def validate_perplexity_key(api_key):
 
             if response.status_code == 200:
                 print_success("Perplexity API-Key ist gültig!")
-                return True
+                return (True, False)
             elif response.status_code == 401:
                 print_error("Perplexity API-Key ist ungültig!")
-                return False
+                return (False, True)
             else:
                 print_warning(f"Unerwartete Antwort: {response.status_code}")
                 print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
-                return True
+                return (True, False)
 
     except Exception as e:
         print_warning(f"Konnte Perplexity API nicht testen: {e}")
         print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
-        return True
+        return (True, False)
 
 
 def create_env_file(config):
@@ -183,8 +187,6 @@ def get_input(prompt, default=None, required=True, secret=False):
     Returns:
         str: User input
     """
-    import getpass
-
     if default:
         prompt_text = f"{prompt} [{default}]: "
     else:
@@ -262,7 +264,7 @@ async def run_wizard():
     )
 
     # Validate Twitch
-    if not await validate_twitch_token(config['TWITCH_OAUTH_TOKEN'], config['TWITCH_CHANNEL']):
+    if not await validate_twitch_token(config['TWITCH_OAUTH_TOKEN'], config['TWITCH_BOT_NICKNAME']):
         retry = input("\nTrotzdem fortfahren? (j/n): ")
         if retry.lower() != 'j':
             print_error("Setup abgebrochen!")
@@ -281,13 +283,15 @@ async def run_wizard():
         api_key = get_input("Perplexity API Key", secret=True, required=True)
         config['PERPLEXITY_API_KEY'] = api_key
 
-        if await validate_perplexity_key(api_key):
+        success, should_retry = await validate_perplexity_key(api_key)
+        if success:
             break
-
-        retry = input("\nErneut versuchen? (j/n): ")
-        if retry.lower() != 'j':
-            print_error("Setup abgebrochen!")
-            return False
+        
+        if should_retry:
+            retry = input("\nErneut versuchen? (j/n): ")
+            if retry.lower() != 'j':
+                print_error("Setup abgebrochen!")
+                return False
 
     # Step 3: Advanced Settings
     print_header("SCHRITT 3: ERWEITERTE EINSTELLUNGEN")
