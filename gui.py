@@ -1,8 +1,8 @@
 """
 Dashboard GUI for Eugen Bot
-Live monitoring interface using PySimpleGUI
+Live monitoring interface using FreeSimpleGUI
 """
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import threading
 from datetime import datetime
 from queue import Queue
