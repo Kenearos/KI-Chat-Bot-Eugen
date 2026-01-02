@@ -1,0 +1,91 @@
+name: PR Labeler
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  label:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+
+    steps:
+    - uses: actions/labeler@v4
+      with:
+        repo-token: "${{ secrets.GITHUB_TOKEN }}"
+
+  size-label:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+    - uses: codelytv/pr-size-labeler@v1
+      with:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        xs_label: 'size/xs'
+        xs_max_size: '10'
+        s_label: 'size/s'
+        s_max_size: '100'
+        m_label: 'size/m'
+        m_max_size: '500'
+        l_label: 'size/l'
+        l_max_size: '1000'
+        xl_label: 'size/xl'
+        fail_if_xl: 'false'
+
+  pr-metadata:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Add labels based on files changed
+      uses: actions/github-script@v7
+      with:
+        script: |
+          const pr = context.payload.pull_request;
+          const labels = [];
+
+          // Get list of files changed
+          const { data: files } = await github.rest.pulls.listFiles({
+            owner: context.repo.owner,
+            repo: context.repo.repo,
+            pull_number: pr.number,
+          });
+
+          // Add labels based on file patterns
+          const filePatterns = {
+            'documentation': /\.(md|txt|rst)$/,
+            'configuration': /\.(yml|yaml|json|toml|ini|env)$/,
+            'dependencies': /requirements\.txt|setup\.py|pyproject\.toml/,
+            'core': /chatbot\.py/,
+            'gui': /gui\.py/,
+            'api': /ai_provider\.py/,
+            'memory': /memory\.py/,
+            'config': /config\.py/,
+            'utilities': /utils\.py/,
+            'ci/cd': /\.github\/workflows/,
+          };
+
+          for (const file of files) {
+            for (const [label, pattern] of Object.entries(filePatterns)) {
+              if (pattern.test(file.filename) && !labels.includes(label)) {
+                labels.push(label);
+              }
+            }
+          }
+
+          // Add the labels
+          if (labels.length > 0) {
+            await github.rest.issues.addLabels({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              labels: labels
+            });
+          }
