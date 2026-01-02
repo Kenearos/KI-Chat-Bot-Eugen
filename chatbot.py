@@ -118,7 +118,14 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         # Extract actual content without mention
         content = self.detector.extract_content(message)
 
+        self.logger.debug(f"Extracted content from '{message}': '{content}'")
+        if self.dashboard:
+            self.dashboard.log_event("info", {"message": f"Content extracted: '{content}'"})
+
         if not content:
+            self.logger.warning(f"Empty content after extraction from: {message}")
+            if self.dashboard:
+                self.dashboard.log_event("warning", {"message": f"Empty content from: {message}"})
             return
 
         try:
