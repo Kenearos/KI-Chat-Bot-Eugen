@@ -1,8 +1,8 @@
 """
 Dashboard GUI for Eugen Bot
-Live monitoring interface using PySimpleGUI
+Live monitoring interface using FreeSimpleGUI
 """
-import PySimpleGUI as sg
+import FreeSimpleGUI as sg
 import threading
 from datetime import datetime
 from queue import Queue
@@ -19,11 +19,7 @@ class Dashboard:
             bot: Reference to the main bot instance
         """
         self.bot = bot
-        # PySimpleGUI 5.x compatibility
-        try:
-            sg.theme('DarkBlue3')
-        except AttributeError:
-            sg.set_options(theme='DarkBlue3')
+        sg.theme('DarkBlue3')
 
         # Event queue for thread-safe updates
         self.event_queue = Queue()
@@ -200,11 +196,7 @@ class SetupWizard:
     """Configuration wizard for first-time setup"""
 
     def __init__(self):
-        # PySimpleGUI 5.x compatibility
-        try:
-            sg.theme('DarkBlue3')
-        except AttributeError:
-            sg.set_options(theme='DarkBlue3')
+        sg.theme('DarkBlue3')
 
     def run(self):
         """
