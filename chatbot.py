@@ -216,6 +216,10 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         # Create event loop for async operations
         self.loop = asyncio.new_event_loop()
 
+        # Start event loop in separate thread
+        loop_thread = threading.Thread(target=self._run_event_loop, daemon=True)
+        loop_thread.start()
+
         # Start bot in separate thread
         bot_thread = threading.Thread(target=self._run_bot, daemon=True)
         bot_thread.start()
@@ -225,9 +229,15 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         self.logger.info("Starting dashboard...")
         self.dashboard.run()
 
+    def _run_event_loop(self):
+        """Run the async event loop (called in thread)"""
+        asyncio.set_event_loop(self.loop)
+        self.logger.debug("Starting event loop...")
+        self.loop.run_forever()
+        self.logger.debug("Event loop stopped")
+
     def _run_bot(self):
         """Run the IRC bot (called in thread)"""
-        asyncio.set_event_loop(self.loop)
         try:
             self.logger.info("Starting IRC bot...")
             super().start()
