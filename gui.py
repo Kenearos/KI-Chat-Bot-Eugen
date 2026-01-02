@@ -218,7 +218,18 @@ class SetupWizard:
 
             [sg.Text("PERPLEXITY CONFIGURATION", font=("Arial", 12, "bold"))],
             [sg.Text("API Key:", size=(20, 1)), sg.Input("pplx-", key="-API-KEY-", password_char="*")],
-            [sg.Text("Model:", size=(20, 1)), sg.Combo(["sonar-pro", "sonar"], default_value="sonar-pro", key="-MODEL-")],
+            [sg.Text("Model:", size=(20, 1)),
+             sg.Combo([
+                 "sonar-pro",
+                 "sonar",
+                 "sonar-reasoning",
+                 "llama-3.1-sonar-small-128k-online",
+                 "llama-3.1-sonar-large-128k-online",
+                 "llama-3.1-sonar-huge-128k-online"
+             ], default_value="sonar-pro", key="-MODEL-", size=(35, 1)),
+             sg.Button("?", key="-MODEL-INFO-", size=(2, 1))],
+            [sg.Text("", size=(20, 1)),
+             sg.Text("Recommended: sonar-pro (best quality)", font=("Arial", 8), text_color="gray")],
             [sg.Text("Max Tokens:", size=(20, 1)), sg.Input("450", key="-TOKENS-")],
 
             [sg.HorizontalSeparator()],
@@ -239,6 +250,43 @@ class SetupWizard:
 
             if event == sg.WINDOW_CLOSED or event == "-CANCEL-":
                 break
+
+            # Show model info
+            if event == "-MODEL-INFO-":
+                model_info = """PERPLEXITY MODEL OVERVIEW:
+
+🔵 sonar-pro (RECOMMENDED)
+   - Best quality and reasoning capabilities
+   - Ideal for chat bots and complex queries
+   - Good balance of speed and intelligence
+
+🟢 sonar
+   - Faster, lower cost
+   - Good for simple queries
+   - Less complex reasoning
+
+🧠 sonar-reasoning
+   - Enhanced reasoning for complex problems
+   - Slower but more thoughtful responses
+
+📚 llama-3.1-sonar-small-128k-online
+   - Smallest, fastest Llama model
+   - 128k context window
+   - Best for simple, quick responses
+
+📚 llama-3.1-sonar-large-128k-online
+   - Larger Llama model
+   - Better quality than small
+   - Good balance
+
+📚 llama-3.1-sonar-huge-128k-online
+   - Largest Llama model
+   - Best quality but slower
+   - Higher cost
+
+For most chat bots: Use sonar-pro"""
+                sg.popup_scrolled(model_info, title="Model Information", size=(60, 25))
+                continue
 
             if event == "-SAVE-":
                 # Validate inputs
