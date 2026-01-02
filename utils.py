@@ -14,13 +14,12 @@ class MentionDetector:
     def __init__(self, bot_name="Eugen"):
         self.bot_name = bot_name
         # Create patterns for various mention formats
+        # More flexible patterns that catch most cases
         self.patterns = [
-            rf"@{bot_name}",  # @Eugen
-            rf"{bot_name}:",  # Eugen:
-            rf"{bot_name},",  # Eugen,
-            rf"^{bot_name}\s",  # Eugen at start
-            rf"\s{bot_name}\s",  # Eugen in middle
-            rf"\s{bot_name}$",  # Eugen at end
+            rf"@{bot_name}\b",  # @Eugen (with word boundary)
+            rf"\b{bot_name}[:!?.,]",  # Eugen: Eugen! Eugen? Eugen, Eugen.
+            rf"^{bot_name}\b",  # Eugen at start of message
+            rf"\b{bot_name}\b",  # Eugen anywhere as whole word
         ]
         # Case-insensitive compilation
         self.compiled_patterns = [
@@ -58,15 +57,20 @@ class MentionDetector:
         if not message:
             return ""
 
-        # Remove common mention patterns
+        # Remove bot name mentions from the message
         content = message
-        patterns_to_remove = [
-            rf"@{self.bot_name}[,:]?\s*",
-            rf"{self.bot_name}[,:]?\s*",
-        ]
 
-        for pattern in patterns_to_remove:
-            content = re.sub(pattern, "", content, flags=re.IGNORECASE)
+        # Remove @mention at start
+        content = re.sub(rf"^@{self.bot_name}\b[,:]?\s*", "", content, flags=re.IGNORECASE)
+
+        # Remove bot name at start with optional punctuation
+        content = re.sub(rf"^{self.bot_name}\b[,:]?\s*", "", content, flags=re.IGNORECASE)
+
+        # Remove bot name at end with optional punctuation
+        content = re.sub(rf"\s*\b{self.bot_name}[,!?.]?\s*$", "", content, flags=re.IGNORECASE)
+
+        # Remove bot name in middle with punctuation
+        content = re.sub(rf"\s*\b{self.bot_name}[,:!?]\s*", " ", content, flags=re.IGNORECASE)
 
         return content.strip()
 
