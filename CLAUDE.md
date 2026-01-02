@@ -20,7 +20,7 @@
 - **Language**: Python 3.9+ (recommended 3.11+)
 - **AI Provider**: Perplexity API (sonar-pro model)
 - **Chat Protocol**: Twitch IRC
-- **GUI Framework**: PySimpleGUI
+- **GUI Framework**: FreeSimpleGUI 5.1+ (community fork, no license required)
 - **Platform**: Windows-native (no Linux tools required)
 
 ## Project Structure
@@ -68,12 +68,11 @@ eugen/
 
 ### Dependencies
 ```
-perplexity-python-client==1.0.0
 irc==20.1.0
 python-dotenv==1.0.0
-PySimpleGUI==4.60.0
+FreeSimpleGUI==5.1.1
 requests==2.31.0
-httpx  # For async API calls
+httpx==0.25.0
 ```
 
 ### Environment Variables (.env)
