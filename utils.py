@@ -13,19 +13,52 @@ class MentionDetector:
 
     def __init__(self, bot_name="Eugen"):
         self.bot_name = bot_name
+
+        # Generate nicknames/partial names from bot_name
+        self.nicknames = self._generate_nicknames(bot_name)
+
         # Create patterns for various mention formats
-        self.patterns = [
-            rf"@{bot_name}",  # @Eugen
-            rf"{bot_name}:",  # Eugen:
-            rf"{bot_name},",  # Eugen,
-            rf"^{bot_name}\s",  # Eugen at start
-            rf"\s{bot_name}\s",  # Eugen in middle
-            rf"\s{bot_name}$",  # Eugen at end
-        ]
+        # Include bot name and all nicknames
+        all_names = [bot_name] + self.nicknames
+        self.patterns = []
+
+        for name in all_names:
+            self.patterns.extend([
+                rf"@{name}\b",  # @name (with word boundary)
+                rf"\b{name}[:!?.,]",  # name: name! name? name, name.
+                rf"^{name}\b",  # name at start of message
+                rf"\b{name}\b",  # name anywhere as whole word
+            ])
+
         # Case-insensitive compilation
         self.compiled_patterns = [
             re.compile(pattern, re.IGNORECASE) for pattern in self.patterns
         ]
+
+        # Patterns for ambiguous greetings (might be directed at bot)
+        self.greeting_patterns = [
+            r"^(hi|hey|hallo|hello|servus|moin)(\s|$|\W)",
+            r"^(wie\s+geht'?s|wie\s+gehts|how\s+are\s+you)",
+            r"^(alles\s+klar|everything\s+ok)",
+        ]
+        self.compiled_greetings = [
+            re.compile(pattern, re.IGNORECASE) for pattern in self.greeting_patterns
+        ]
+
+    def _generate_nicknames(self, bot_name):
+        """Generate common nicknames from bot name"""
+        nicknames = []
+
+        # For kenearosmd, generate: Kene, Kenearos
+        if len(bot_name) >= 4:
+            nicknames.append(bot_name[:4])  # First 4 chars (Kene)
+        if len(bot_name) >= 8:
+            nicknames.append(bot_name[:8])  # First 8 chars (Kenearos)
+
+        # Remove duplicates and the full name
+        nicknames = [n for n in set(nicknames) if n != bot_name]
+
+        return nicknames
 
     def is_mentioned(self, message):
         """
@@ -45,6 +78,28 @@ class MentionDetector:
                 return True
         return False
 
+    def is_ambiguous_greeting(self, message):
+        """
+        Check if message is an ambiguous greeting that might be for the bot
+
+        Args:
+            message (str): Chat message to check
+
+        Returns:
+            bool: True if message is an ambiguous greeting
+        """
+        if not message:
+            return False
+
+        # Don't check if there's already a clear mention
+        if self.is_mentioned(message):
+            return False
+
+        for pattern in self.compiled_greetings:
+            if pattern.search(message):
+                return True
+        return False
+
     def extract_content(self, message):
         """
         Extract message content without the mention
@@ -58,15 +113,22 @@ class MentionDetector:
         if not message:
             return ""
 
-        # Remove common mention patterns
+        # Remove bot name and nickname mentions from the message
         content = message
-        patterns_to_remove = [
-            rf"@{self.bot_name}[,:]?\s*",
-            rf"{self.bot_name}[,:]?\s*",
-        ]
+        all_names = [self.bot_name] + self.nicknames
 
-        for pattern in patterns_to_remove:
-            content = re.sub(pattern, "", content, flags=re.IGNORECASE)
+        for name in all_names:
+            # Remove @mention at start
+            content = re.sub(rf"^@{name}\b[,:]?\s*", "", content, flags=re.IGNORECASE)
+
+            # Remove name at start with optional punctuation
+            content = re.sub(rf"^{name}\b[,:]?\s*", "", content, flags=re.IGNORECASE)
+
+            # Remove name at end with optional punctuation
+            content = re.sub(rf"\s*\b{name}[,!?.]?\s*$", "", content, flags=re.IGNORECASE)
+
+            # Remove name in middle with punctuation
+            content = re.sub(rf"\s*\b{name}[,:!?]\s*", " ", content, flags=re.IGNORECASE)
 
         return content.strip()
 
