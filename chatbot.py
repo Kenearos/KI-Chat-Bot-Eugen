@@ -30,18 +30,22 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         self.bot_name = config.bot_name
         self.channel = config.twitch_channel
 
+        # Initialize logger first
+        self.logger = Logger(log_dir=config.log_dir, debug_mode=config.debug_mode)
+
         # Initialize components
         self.memory = ConversationMemory(
             data_dir=config.data_dir,
-            retention_hours=config.context_retention_hours
+            retention_hours=config.context_retention_hours,
+            logger=self.logger
         )
         self.ai = PerplexityProvider(
             api_key=config.perplexity_key,
             model=config.model,
-            max_tokens=config.max_tokens
+            max_tokens=config.max_tokens,
+            logger=self.logger
         )
         self.detector = MentionDetector(bot_name=self.bot_name)
-        self.logger = Logger(log_dir=config.log_dir, debug_mode=config.debug_mode)
 
         # Dashboard (will be initialized in GUI thread)
         self.dashboard = None

@@ -5,13 +5,14 @@ Handles communication with Perplexity Sonar API
 import httpx
 import json
 import time
+import logging
 from typing import List, Dict, Optional
 
 
 class PerplexityProvider:
     """Communicates with Perplexity API for AI responses"""
 
-    def __init__(self, api_key, model="sonar-pro", max_tokens=450, temperature=0.7):
+    def __init__(self, api_key, model="sonar-pro", max_tokens=450, temperature=0.7, logger=None):
         """
         Initialize Perplexity API provider
 
@@ -20,12 +21,14 @@ class PerplexityProvider:
             model (str): Model to use (default: sonar-pro)
             max_tokens (int): Maximum tokens in response
             temperature (float): Sampling temperature
+            logger: Optional logger instance for error reporting
         """
         self.api_key = api_key
         self.model = model
         self.max_tokens = max_tokens
         self.temperature = temperature
         self.base_url = "https://api.perplexity.ai"
+        self.logger = logger or logging.getLogger(__name__)
 
         # Statistics
         self.total_requests = 0
@@ -85,16 +88,16 @@ class PerplexityProvider:
                 else:
                     self.total_errors += 1
                     error_msg = f"API Error {response.status_code}: {response.text}"
-                    print(error_msg)
+                    self.logger.error(error_msg)
                     return None
 
         except httpx.TimeoutException:
             self.total_errors += 1
-            print("API Timeout: Request took too long")
+            self.logger.error("API Timeout: Request took too long")
             return None
         except Exception as e:
             self.total_errors += 1
-            print(f"API Error: {str(e)}")
+            self.logger.error(f"API Error: {str(e)}")
             return None
 
     async def validate_api_key(self):
