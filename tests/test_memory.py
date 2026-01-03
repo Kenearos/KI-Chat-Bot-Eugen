@@ -327,3 +327,39 @@ class TestConversationMemory:
         # Only message within retention should be kept
         assert len(retrieved) == 1
         assert retrieved[0]["content"] == "Just under boundary"
+
+    def test_add_message_handles_read_error_gracefully(self, temp_dir, mocker):
+        """Test that add_message handles file read errors gracefully"""
+        memory = ConversationMemory(data_dir=str(temp_dir))
+
+        # Create a file first
+        memory.add_message("testuser", "user", "First message")
+
+        # Mock json.load to raise an exception
+        mocker.patch("json.load", side_effect=PermissionError("Permission denied"))
+
+        # Should not crash, should handle the error gracefully
+        memory.add_message("testuser", "user", "Second message")
+
+    def test_add_message_handles_write_error_gracefully(self, temp_dir, mocker):
+        """Test that add_message handles file write errors gracefully"""
+        memory = ConversationMemory(data_dir=str(temp_dir))
+
+        # Mock json.dump to raise an exception
+        mocker.patch("json.dump", side_effect=IOError("Disk full"))
+
+        # Should not crash even when write fails
+        memory.add_message("testuser", "user", "Test message")
+
+    def test_clear_user_history_handles_permission_error(self, temp_dir, mocker):
+        """Test that clear_user_history handles permission errors gracefully"""
+        memory = ConversationMemory(data_dir=str(temp_dir))
+
+        # Create a user file
+        memory.add_message("testuser", "user", "Test message")
+
+        # Mock unlink to raise permission error
+        mocker.patch("pathlib.Path.unlink", side_effect=PermissionError("Permission denied"))
+
+        # Should not crash
+        memory.clear_user_history("testuser")
