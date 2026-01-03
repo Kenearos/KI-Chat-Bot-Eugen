@@ -105,29 +105,24 @@ tests/
 
 ## Test Statistics
 
-- **Total Tests**: 173 (+57 from initial 116)
+- **Total Tests**: 173 tests (up from 116)
 - **Passing**: 173 (100%)
 - **Code Coverage**: 100% (up from 97%)
 - **Test Execution Time**: ~1.1 seconds
 
 ## Test Breakdown
 
-- **Unit Tests**: 156 tests
-  - MentionDetector: 73 tests (including 45 parameterized)
+- **Unit Tests**: 163 tests
+  - MentionDetector: 84 tests (including 45 parameterized)
   - Logger: 16 tests
   - ConversationMemory: 28 tests
   - PerplexityProvider: 22 tests
-  - Config: 27 tests
+  - Config: 29 tests
 
-- **Integration Tests**: 9 tests
+- **Integration Tests**: 10 tests
   - Full workflow testing
   - Component interaction
   - Error recovery scenarios
-
-- **Parameterized Tests**: 45 tests
-  - Mention detection patterns
-  - Greeting detection
-  - Content extraction
 
 ## Improvements from Initial Version
 

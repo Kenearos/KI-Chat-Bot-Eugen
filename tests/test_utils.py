@@ -2,7 +2,6 @@
 Tests for utility classes: MentionDetector and Logger
 """
 import pytest
-from pathlib import Path
 import logging
 from utils import MentionDetector, Logger
 
@@ -20,7 +19,7 @@ MENTION_TEST_CASES = [
     ("Eugen. listen", "Eugen", True, "period format"),
     ("Hey Eugen how are you", "Eugen", True, "mention in middle"),
     ("Is Eugen online?", "Eugen", True, "mention as word"),
-    ("Eugene is different", "Eugen", False, "partial match should fail"),
+    ("Eugene is different", "Eugen", False, "name as substring of longer word should fail"),
     ("Eugenics is a topic", "Eugen", False, "false positive check"),
     ("Regular message", "Eugen", False, "no mention"),
     ("@kenearosmd hi", "kenearosmd", True, "long name at-mention"),
@@ -436,18 +435,18 @@ class TestLogger:
 
     def test_logger_reuses_existing_handlers(self, temp_dir):
         """Test that logger doesn't create duplicate handlers"""
-        import logging
-
         log_dir = temp_dir / "logs"
 
-        # Create first logger
-        logger1 = Logger(log_dir=str(log_dir), debug_mode=True)
-        handler_count_1 = len(logger1.main_logger.handlers)
+        # Create first logger instance to set up handlers
+        Logger(log_dir=str(log_dir), debug_mode=True)
+        main_logger_1 = logging.getLogger("eugen_main")
+        handler_count_1 = len(main_logger_1.handlers)
 
-        # Create second logger with same settings - should reuse handlers
-        logger2 = Logger(log_dir=str(log_dir), debug_mode=True)
-        handler_count_2 = len(logger2.main_logger.handlers)
+        # Create second logger with same settings - should not add handlers
+        Logger(log_dir=str(log_dir), debug_mode=True)
+        main_logger_2 = logging.getLogger("eugen_main")
+        handler_count_2 = len(main_logger_2.handlers)
 
-        # Should have same number of handlers (reused, not duplicated)
+        # Underlying logger should have the same number of handlers (reused, not duplicated)
         assert handler_count_1 == handler_count_2
         assert handler_count_1 > 0  # But should have at least one handler

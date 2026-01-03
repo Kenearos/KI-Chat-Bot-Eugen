@@ -3,8 +3,7 @@ Integration tests for Eugen Bot
 Tests the full workflow and component integration
 """
 import pytest
-import asyncio
-from unittest.mock import Mock, AsyncMock, patch, MagicMock
+from unittest.mock import Mock, AsyncMock, patch
 from config import Config
 from memory import ConversationMemory
 from ai_provider import PerplexityProvider
@@ -71,7 +70,6 @@ class TestFullWorkflow:
         """Test that conversation context is preserved across messages"""
         config = Config(env_file=str(mock_env_file), config_file=str(temp_dir / "config.json"))
         memory = ConversationMemory(data_dir=str(temp_dir / "conversations"))
-        ai = PerplexityProvider(api_key=config.perplexity_key)
 
         username = "testuser"
 
@@ -175,7 +173,6 @@ class TestFullWorkflow:
     @pytest.mark.asyncio
     async def test_memory_limit_enforcement_in_workflow(self, temp_dir, mock_env_file):
         """Test that memory limits are enforced during conversation"""
-        config = Config(env_file=str(mock_env_file), config_file=str(temp_dir / "config.json"))
         memory = ConversationMemory(
             data_dir=str(temp_dir / "conversations"),
             max_messages=10
@@ -266,11 +263,12 @@ class TestComponentInteraction:
 
         # Create complete config
         complete_env = temp_dir / "complete.env"
-        complete_env.write_text("""TWITCH_OAUTH_TOKEN=oauth:test123
-TWITCH_CHANNEL=#testchannel
-TWITCH_BOT_NICKNAME=TestBot
-PERPLEXITY_API_KEY=pplx-test123
-""")
+        complete_env.write_text(
+            "TWITCH_OAUTH_TOKEN=oauth:test123\n"
+            "TWITCH_CHANNEL=#testchannel\n"
+            "TWITCH_BOT_NICKNAME=TestBot\n"
+            "PERPLEXITY_API_KEY=pplx-test123\n"
+        )
 
         config2 = Config(env_file=str(complete_env), config_file=str(temp_dir / "config.json"))
 
