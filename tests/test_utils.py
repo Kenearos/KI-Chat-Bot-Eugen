@@ -2,13 +2,90 @@
 Tests for utility classes: MentionDetector and Logger
 """
 import pytest
-from pathlib import Path
 import logging
 from utils import MentionDetector, Logger
 
 
+# Parameterized test data
+MENTION_TEST_CASES = [
+    # (message, bot_name, expected_result, description)
+    ("@Eugen hello", "Eugen", True, "at-mention"),
+    ("@eugen hello", "Eugen", True, "at-mention lowercase"),
+    ("@EUGEN hello", "Eugen", True, "at-mention uppercase"),
+    ("Eugen: what's up?", "Eugen", True, "colon format"),
+    ("Eugen! hey", "Eugen", True, "exclamation format"),
+    ("Eugen? are you there", "Eugen", True, "question format"),
+    ("Eugen, help me", "Eugen", True, "comma format"),
+    ("Eugen. listen", "Eugen", True, "period format"),
+    ("Hey Eugen how are you", "Eugen", True, "mention in middle"),
+    ("Is Eugen online?", "Eugen", True, "mention as word"),
+    ("Eugene is different", "Eugen", False, "name as substring of longer word should fail"),
+    ("Eugenics is a topic", "Eugen", False, "false positive check"),
+    ("Regular message", "Eugen", False, "no mention"),
+    ("@kenearosmd hi", "kenearosmd", True, "long name at-mention"),
+    ("@kene hi", "kenearosmd", True, "nickname 4 chars"),
+    ("@kenearos hi", "kenearosmd", True, "nickname 8 chars"),
+    ("kenearosmd: what", "kenearosmd", True, "long name colon"),
+    ("kene: what", "kenearosmd", True, "nickname colon"),
+]
+
+GREETING_TEST_CASES = [
+    # (message, expected_ambiguous, description)
+    ("hi", True, "simple hi"),
+    ("Hi", True, "capitalized Hi"),
+    ("HI", True, "uppercase HI"),
+    ("hello", True, "hello"),
+    ("hallo", True, "German hallo"),
+    ("hey there", True, "hey there"),
+    ("moin", True, "German moin"),
+    ("servus", True, "German servus"),
+    ("wie gehts", True, "German wie gehts"),
+    ("wie geht's", True, "German with apostrophe"),
+    ("alles klar", True, "German alles klar"),
+    ("how are you", True, "English how are you"),
+    ("everything ok", True, "English everything ok"),
+    ("@Eugen hi", False, "clear mention not ambiguous"),
+    ("Eugen: hello", False, "clear mention not ambiguous"),
+    ("Just a message", False, "not a greeting"),
+    ("high score", False, "hi in word should not match"),
+]
+
+CONTENT_EXTRACTION_CASES = [
+    # (message, bot_name, expected_content, description)
+    ("@Eugen what's the weather?", "Eugen", "what's the weather?", "at-mention extraction"),
+    ("Eugen: tell me more", "Eugen", "tell me more", "colon extraction"),
+    ("Eugen, help please", "Eugen", "help please", "comma extraction"),
+    ("what's up Eugen", "Eugen", "what's up", "mention at end"),
+    ("@Eugen", "Eugen", "", "only mention"),
+    ("Eugen", "Eugen", "", "only name"),
+    ("@kene what's up", "kenearosmd", "what's up", "nickname extraction"),
+    ("", "Eugen", "", "empty message"),
+]
+
+
 class TestMentionDetector:
     """Test MentionDetector functionality"""
+
+    @pytest.mark.parametrize("message,bot_name,expected,description", MENTION_TEST_CASES)
+    def test_mention_detection_comprehensive(self, message, bot_name, expected, description):
+        """Parameterized test for comprehensive mention detection coverage"""
+        detector = MentionDetector(bot_name)
+        result = detector.is_mentioned(message)
+        assert result == expected, f"Failed for case: {description}"
+
+    @pytest.mark.parametrize("message,expected,description", GREETING_TEST_CASES)
+    def test_ambiguous_greeting_comprehensive(self, message, expected, description):
+        """Parameterized test for comprehensive greeting detection"""
+        detector = MentionDetector("Eugen")
+        result = detector.is_ambiguous_greeting(message)
+        assert result == expected, f"Failed for case: {description}"
+
+    @pytest.mark.parametrize("message,bot_name,expected_content,description", CONTENT_EXTRACTION_CASES)
+    def test_content_extraction_comprehensive(self, message, bot_name, expected_content, description):
+        """Parameterized test for comprehensive content extraction"""
+        detector = MentionDetector(bot_name)
+        result = detector.extract_content(message)
+        assert result.strip() == expected_content.strip(), f"Failed for case: {description}"
 
     def test_init_generates_nicknames(self):
         """Test that nicknames are generated from bot name"""
@@ -355,3 +432,21 @@ class TestLogger:
         assert "Öle" in content
         assert "Über" in content
         assert "ß" in content
+
+    def test_logger_reuses_existing_handlers(self, temp_dir):
+        """Test that logger doesn't create duplicate handlers"""
+        log_dir = temp_dir / "logs"
+
+        # Create first logger instance to set up handlers
+        Logger(log_dir=str(log_dir), debug_mode=True)
+        main_logger_1 = logging.getLogger("eugen_main")
+        handler_count_1 = len(main_logger_1.handlers)
+
+        # Create second logger with same settings - should not add handlers
+        Logger(log_dir=str(log_dir), debug_mode=True)
+        main_logger_2 = logging.getLogger("eugen_main")
+        handler_count_2 = len(main_logger_2.handlers)
+
+        # Underlying logger should have the same number of handlers (reused, not duplicated)
+        assert handler_count_1 == handler_count_2
+        assert handler_count_1 > 0  # But should have at least one handler
