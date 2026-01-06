@@ -26,6 +26,14 @@ class TestBot(irc.bot.SingleServerIRCBot):
         )
         self.channel = channel
 
+        # Add global handler to debug ALL events
+        self.reactor.add_global_handler("all_events", self._debug_all_events)
+
+    def _debug_all_events(self, connection, event):
+        """Log all IRC events for debugging"""
+        args_str = str(event.arguments)[:200] if event.arguments else 'None'
+        print(f"🔍 EVENT: {event.type} | Source: {event.source} | Target: {event.target} | Args: {args_str}")
+
     def on_welcome(self, connection, event):
         print(f"✅ Connected! Joining {self.channel}")
         connection.cap("REQ", ":twitch.tv/membership")
@@ -33,10 +41,23 @@ class TestBot(irc.bot.SingleServerIRCBot):
         connection.cap("REQ", ":twitch.tv/commands")
         connection.join(self.channel)
 
+    def on_join(self, connection, event):
+        print(f"✅ Joined channel: {event.target}")
+
     def on_pubmsg(self, connection, event):
         username = event.source.nick
         message = event.arguments[0]
-        print(f"📨 MESSAGE | {username}: {message}")
+        print(f"📨 PUBMSG | {username}: {message}")
+
+    def on_privmsg(self, connection, event):
+        username = event.source.nick
+        message = event.arguments[0]
+        print(f"📨 PRIVMSG | {username}: {message}")
+
+    def on_action(self, connection, event):
+        username = event.source.nick
+        message = event.arguments[0]
+        print(f"📨 ACTION | {username}: {message}")
 
 if __name__ == "__main__":
     print("Starting IRC test bot...")

@@ -68,7 +68,15 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         self.loop = None
         self.loop_ready = threading.Event()  # Signal when event loop is ready
 
+        # Add global handler to debug all events
+        self.reactor.add_global_handler("all_events", self._debug_all_events)
+
         self.logger.info(f"Bot initialized: {nickname} → {self.channel}")
+
+    def _debug_all_events(self, connection, event):
+        """Debug handler for all IRC events"""
+        args_str = str(event.arguments)[:200] if event.arguments else 'None'
+        self.logger.debug(f"IRC EVENT: {event.type} | Source: {event.source} | Target: {event.target} | Args: {args_str}")
 
     def on_welcome(self, connection, event):
         """Called when bot connects to IRC server"""
@@ -76,16 +84,38 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         if self.dashboard:
             self.dashboard.log_event("info", {"message": "Connected to Twitch IRC"})
 
-        # Request Twitch-specific capabilities
+        # Request Twitch-specific capabilities BEFORE joining
+        self.logger.debug("Requesting Twitch capabilities...")
         connection.cap("REQ", ":twitch.tv/membership")
         connection.cap("REQ", ":twitch.tv/tags")
         connection.cap("REQ", ":twitch.tv/commands")
 
         # Join channel
+        self.logger.debug(f"Joining channel: {self.channel}")
         connection.join(self.channel)
-        self.logger.info(f"Joined channel: {self.channel}")
+
+    def on_join(self, connection, event):
+        """Called when bot joins a channel"""
+        channel = event.target
+        self.logger.info(f"Joined channel: {channel}")
         if self.dashboard:
-            self.dashboard.log_event("info", {"message": f"Joined {self.channel}"})
+            self.dashboard.log_event("info", {"message": f"Joined {channel}"})
+
+    def on_disconnect(self, connection, event):
+        """Called when bot disconnects from IRC server"""
+        self.logger.warning("Disconnected from Twitch IRC!")
+        if self.dashboard:
+            self.dashboard.log_event("warning", {"message": "Disconnected from Twitch IRC!"})
+
+    def on_privmsg(self, connection, event):
+        """Called for private messages - delegate to pubmsg handler for channel messages"""
+        target = event.target
+        self.logger.debug(f"PRIVMSG received - Target: {target}")
+        # If target is a channel, treat as public message
+        if target and target.startswith('#'):
+            self.on_pubmsg(connection, event)
+        else:
+            self.logger.debug(f"Private message from {event.source.nick}: {event.arguments[0]}")
 
     def on_pubmsg(self, connection, event):
         """Called when a message is received in chat"""
@@ -93,6 +123,7 @@ class EugenBot(irc.bot.SingleServerIRCBot):
         username = event.source.nick
         message = event.arguments[0]
 
+        self.logger.debug(f"PUBMSG from {username}: {message}")
         self.logger.chat_message(username, message)
         if self.dashboard:
             self.dashboard.log_event("chat_message", {
