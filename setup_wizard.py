@@ -69,20 +69,47 @@ async def validate_twitch_token(token, bot_nickname):
     try:
         print_info("Validiere Twitch-Verbindung...")
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.settimeout(5)
-            sock.connect(('irc.chat.twitch.tv', 6667))
+            sock.settimeout(10)
+
+            # Connect
+            try:
+                sock.connect(('irc.chat.twitch.tv', 6667))
+            except socket.timeout:
+                print_warning("Verbindung zu Twitch IRC hat zu lange gedauert")
+                print_info("Prüfe deine Internetverbindung und Firewall-Einstellungen")
+                print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
+                return True
 
             # Send authentication
             sock.send(f"PASS {token}\r\n".encode())
             sock.send(f"NICK {bot_nickname}\r\n".encode())
 
-            response = sock.recv(1024).decode()
+            # Receive response
+            response = sock.recv(2048).decode()
 
             if "Login authentication failed" in response:
                 print_error("Twitch OAuth Token ist ungültig!")
+                print_info("\nMögliche Gründe:")
+                print(f"  • Token ist abgelaufen oder ungültig")
+                print(f"  • Token passt nicht zum Bot-Namen '{bot_nickname}'")
+                print(f"  • Account ist gesperrt oder eingeschränkt")
+                print_info("\nLösung:")
+                print(f"  → Gehe zu: https://twitchtokengenerator.com")
+                print(f"  → Stelle sicher, dass du als '{bot_nickname}' eingeloggt bist")
+                print(f"  → Generiere einen neuen 'Bot Chat Token'")
                 return False
 
-            print_success("Twitch-Verbindung erfolgreich!")
+            if ":tmi.twitch.tv 001" in response or "Welcome" in response:
+                print_success("Twitch-Verbindung erfolgreich!")
+                return True
+
+            # Ambiguous - probably OK
+            if "authentication failed" not in response.lower():
+                print_success("Twitch-Verbindung scheinbar erfolgreich (kein Fehler erkannt)")
+                return True
+
+            print_warning(f"Unerwartete Antwort von Twitch IRC")
+            print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
             return True
 
     except Exception as e:
@@ -93,8 +120,8 @@ async def validate_twitch_token(token, bot_nickname):
 
 async def validate_perplexity_key(api_key, model="sonar-pro"):
     """
-    Validate Perplexity API key with test request
-    
+    Validate Perplexity API key with test request and model fallback
+
     Note: Validation uses the specified model (default: sonar-pro).
     If your API key doesn't have access to this model, validation may fail
     even with a valid key for other models.
@@ -104,40 +131,73 @@ async def validate_perplexity_key(api_key, model="sonar-pro"):
         model (str): Model to test with (defaults to sonar-pro)
 
     Returns:
-        tuple: (bool success, bool should_retry) - success indicates if validation passed,
-               should_retry indicates if user should be prompted to retry
+        tuple: (bool success, bool should_retry, str recommended_model)
+               success indicates if validation passed,
+               should_retry indicates if user should be prompted to retry,
+               recommended_model is the working model if different from requested
     """
-    try:
-        print_info(f"Validiere Perplexity API-Key mit Modell '{model}'...")
-        async with httpx.AsyncClient(timeout=10.0) as client:
-            response = await client.post(
-                "https://api.perplexity.ai/chat/completions",
-                json={
-                    "model": model,
-                    "messages": [{"role": "user", "content": "test"}],
-                    "max_tokens": 10
-                },
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": "application/json"
-                }
-            )
+    # Test with multiple models
+    models_to_test = [model]
+    if model != "sonar":
+        models_to_test.append("sonar")
 
-            if response.status_code == 200:
-                print_success("Perplexity API-Key ist gültig!")
-                return (True, False)
-            elif response.status_code == 401:
-                print_error("Perplexity API-Key ist ungültig!")
-                return (False, True)
-            else:
-                print_warning(f"Unerwartete Antwort: {response.status_code}")
-                print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
-                return (True, False)
+    for test_model in models_to_test:
+        try:
+            print_info(f"Validiere Perplexity API-Key mit Modell '{test_model}'...")
+            async with httpx.AsyncClient(timeout=10.0) as client:
+                response = await client.post(
+                    "https://api.perplexity.ai/chat/completions",
+                    json={
+                        "model": test_model,
+                        "messages": [{"role": "user", "content": "test"}],
+                        "max_tokens": 10
+                    },
+                    headers={
+                        "Authorization": f"Bearer {api_key}",
+                        "Content-Type": "application/json"
+                    }
+                )
 
-    except Exception as e:
-        print_warning(f"Konnte Perplexity API nicht testen: {e}")
-        print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
-        return (True, False)
+                if response.status_code == 200:
+                    print_success(f"Perplexity API-Key ist gültig mit Modell '{test_model}'!")
+                    if test_model != model:
+                        print_warning(f"Hinweis: Modell '{model}' nicht verfügbar, verwende '{test_model}'")
+                    return (True, False, test_model)
+                elif response.status_code == 401:
+                    print_error("Perplexity API-Key ist ungültig (401 Unauthorized)!")
+                    print_info("Bitte überprüfe deinen API-Key auf: https://www.perplexity.ai/settings/api")
+                    return (False, True, None)
+                elif response.status_code == 400:
+                    try:
+                        error_data = response.json()
+                        error_msg = error_data.get("error", {}).get("message", "Unbekannter Fehler")
+
+                        # Check if model access issue
+                        if "model" in error_msg.lower() and test_model != models_to_test[-1]:
+                            print_warning(f"Modell '{test_model}' nicht verfügbar: {error_msg}")
+                            print_info("Versuche Fallback-Modell...")
+                            continue
+                        else:
+                            print_warning(f"400 Fehler: {error_msg}")
+                            print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
+                            return (True, False, model)
+                    except:
+                        print_warning(f"Unerwartete Antwort: {response.status_code}")
+                        print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
+                        return (True, False, model)
+                else:
+                    print_warning(f"Unerwartete Antwort: {response.status_code}")
+                    print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
+                    return (True, False, model)
+
+        except Exception as e:
+            print_warning(f"Konnte Perplexity API nicht testen: {e}")
+            print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
+            return (True, False, model)
+
+    # All models failed
+    print_error("Alle Modelle fehlgeschlagen!")
+    return (False, True, None)
 
 
 def create_env_file(config):
@@ -279,14 +339,17 @@ async def run_wizard():
     print("  → Kopiere den Key (beginnt mit 'pplx-...')")
     print()
 
+    recommended_model = "sonar-pro"
     while True:
         api_key = get_input("Perplexity API Key", secret=True, required=True)
         config['PERPLEXITY_API_KEY'] = api_key
 
-        success, should_retry = await validate_perplexity_key(api_key)
+        success, should_retry, working_model = await validate_perplexity_key(api_key, "sonar-pro")
         if success:
+            if working_model:
+                recommended_model = working_model
             break
-        
+
         if should_retry:
             retry = input("\nErneut versuchen? (j/n): ")
             if retry.lower() != 'j':
@@ -302,7 +365,7 @@ async def run_wizard():
     if advanced:
         config['PERPLEXITY_MODEL'] = get_input(
             "Perplexity Modell",
-            default="sonar-pro"
+            default=recommended_model
         )
         config['MAX_TOKENS'] = get_input(
             "Max Tokens pro Antwort",
@@ -317,7 +380,7 @@ async def run_wizard():
             default="1"
         )
     else:
-        config['PERPLEXITY_MODEL'] = "sonar-pro"
+        config['PERPLEXITY_MODEL'] = recommended_model
         config['MAX_TOKENS'] = "450"
         config['DEBUG_MODE'] = "false"
         config['CONTEXT_RETENTION_HOURS'] = "1"
