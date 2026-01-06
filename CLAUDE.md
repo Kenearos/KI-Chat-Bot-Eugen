@@ -28,6 +28,8 @@
 ```
 eugen/
 ├── chatbot.py              # Main entry point
+├── setup_wizard.py         # Interactive setup wizard
+├── test_credentials.py     # Credential validation tool
 ├── config.py               # Configuration management
 ├── gui.py                  # Dashboard GUI
 ├── ai_provider.py          # Perplexity API integration
@@ -102,12 +104,32 @@ python -m venv venv
 # Install dependencies
 pip install -r requirements.txt
 
+# Run interactive setup wizard
+python setup_wizard.py
+
+# Test credentials (recommended before first run)
+python test_credentials.py
+
 # Run the bot
 python chatbot.py
 ```
 
-## Testing API Keys
+## Testing Credentials
 
+Use the credential validator for comprehensive testing:
+
+```bash
+python test_credentials.py
+```
+
+This tool:
+- Tests Twitch OAuth token with IRC authentication
+- Validates Perplexity API key and model access
+- Provides detailed error diagnostics
+- Suggests fixes for common issues
+- Automatically tests fallback models (sonar-pro → sonar)
+
+Manual testing:
 - **Twitch**: Test IRC connection to irc.chat.twitch.tv:6667
 - **Perplexity**: POST to https://api.perplexity.ai/chat/completions with a simple test message
 
