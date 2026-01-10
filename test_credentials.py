@@ -210,7 +210,7 @@ async def test_perplexity_key(api_key, model="sonar-pro"):
                         if "choices" in data and len(data["choices"]) > 0:
                             content = data["choices"][0]["message"]["content"]
                             print_info(f"Test response: '{content}'")
-                    except:
+                    except Exception:
                         pass
 
                     return True, test_model
@@ -237,7 +237,7 @@ async def test_perplexity_key(api_key, model="sonar-pro"):
                                 continue
                         else:
                             print_info(f"Error details: {error_msg}")
-                    except:
+                    except Exception:
                         print_warning(f"400 Bad Request (couldn't parse error)")
 
                     # If this was the last model, fail
@@ -254,7 +254,7 @@ async def test_perplexity_key(api_key, model="sonar-pro"):
                     print_warning(f"Unexpected status code: {response.status_code}")
                     try:
                         print_info(f"Response: {response.text[:200]}")
-                    except:
+                    except Exception:
                         pass
 
                     # Try next model if available

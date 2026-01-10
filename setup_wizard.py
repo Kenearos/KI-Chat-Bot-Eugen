@@ -181,7 +181,7 @@ async def validate_perplexity_key(api_key, model="sonar-pro"):
                             print_warning(f"400 Fehler: {error_msg}")
                             print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
                             return (True, False, model)
-                    except:
+                    except Exception:
                         print_warning(f"Unerwartete Antwort: {response.status_code}")
                         print_info("Fahre trotzdem fort - bitte später manuell prüfen!")
                         return (True, False, model)

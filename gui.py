@@ -152,7 +152,7 @@ class Dashboard:
                 try:
                     msg = self.event_queue.get_nowait()
                     self.window["-LOG-"].print(msg)
-                except:
+                except Exception:
                     break
 
             # Update statistics
